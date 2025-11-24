@@ -10,41 +10,43 @@ from processing.image_processor import FrameData
 class SimpleBlobStrategy(DetectionStrategy):
     def __init__(
         self,
-        min_threshold: float = 100,
-        max_threshold: float = 255,
-        threshold_step: float = 10,
-        min_area: float = 1,
-        max_area: float = 20000,
-        min_dist: float = 1,
-        use_blur: bool = True,
-        ksize: int = 3,
-        draw: bool = True,
-        debug_gray: bool = True,
+        min_threshold=5,
+        max_threshold=255,
+        threshold_step=5,
+        filter_by_color = True,
+        blob_color = 255,
+        min_area=1,
+        max_area=20000,
+        min_dist=1,
+        draw=True,
+        debug_gray=True,
     ):
         params = cv.SimpleBlobDetector_Params()
         params.minThreshold = min_threshold
         params.maxThreshold = max_threshold
         params.thresholdStep = threshold_step
+
+        params.filterByColor = filter_by_color
+        params.blobColor = blob_color
+
         params.filterByArea = True
         params.minArea = min_area
         params.maxArea = max_area
+
         params.minDistBetweenBlobs = min_dist
         params.filterByCircularity = False
-        params.filterByColor = True
-        params.blobColor = 255
 
         self.detector = cv.SimpleBlobDetector_create(params)
 
-        self.use_blur = use_blur
-        self.ksize = ksize if ksize % 2 == 1 else ksize + 1
+        # Blur is now expected to be done in the preprocessing pipeline
         self.draw = draw
         self.debug_gray = debug_gray
 
-    def process_frame(self, frame: FrameData, dt: float) -> StrategyOutput:
-        gray = frame.gray
+    # ——— IMPLEMENTATION ———
 
-        if self.use_blur:
-            gray = cv.GaussianBlur(gray, (self.ksize, self.ksize), 0)
+    def process_frame(self, frame: FrameData, dt: float) -> StrategyOutput:
+        # Use whatever the pipeline gives us as gray (already scaled / CLAHE / blurred)
+        gray = frame.gray
 
         keypoints = self.detector.detect(gray)
         blobs = self._kp_to_blobs(keypoints)
@@ -59,7 +61,7 @@ class SimpleBlobStrategy(DetectionStrategy):
                 cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
             )
 
-        # Blob counter text (first line)
+        # Blob counter overlay
         cv.putText(
             vis,
             f"Blobs: {len(blobs)}",

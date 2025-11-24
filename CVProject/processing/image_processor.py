@@ -20,30 +20,13 @@ class ImageProcessor:
         raise NotImplementedError()
 
 
-class BasicProcessor(ImageProcessor):
-    def __init__(self, scale: float = 1.0):
-        self.scale = scale
-
-    def process(self, frame_bgr: np.ndarray, dt: float) -> FrameData:
-        if self.scale != 1.0:
-            bgr = cv.resize(frame_bgr, None, fx=self.scale, fy=self.scale)
-        else:
-            bgr = frame_bgr
-
-        gray = cv.cvtColor(bgr, cv.COLOR_BGR2GRAY)
-
-        return FrameData(
-            original_bgr=frame_bgr,
-            bgr=bgr,
-            gray=gray,
-        )
-
-
 Stage = Callable[[FrameData, float], FrameData]
 
 
 class CompositeProcessor(ImageProcessor):
     def __init__(self, stages: List[Stage]):
+        if not stages:
+            raise ValueError("CompositeProcessor requires at least one stage")
         self.stages = stages
 
     def process(self, frame_bgr: np.ndarray, dt: float) -> FrameData:
