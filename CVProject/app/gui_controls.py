@@ -47,9 +47,9 @@ class PipelineController:
         }
 
         # default visual range settings (16-bit units)
-        self.vr_enabled = False
-        self.vr_min = 0
-        self.vr_max = 5000
+        self.vr_enabled = True
+        self.vr_min = 10000
+        self.vr_max = 20000
 
         # initialise capture visual range (disabled)
         if isinstance(self.capture, OrbbecIRCapture):
