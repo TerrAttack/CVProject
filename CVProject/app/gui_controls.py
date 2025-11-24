@@ -47,7 +47,7 @@ class PipelineController:
         }
 
         # default visual range settings (16-bit units)
-        self.vr_enabled = True
+        self.vr_enabled = False
         self.vr_min = 10000
         self.vr_max = 20000
 
@@ -73,6 +73,9 @@ class PipelineController:
         if self.pipeline_state["scale"] != 1.0:
             s.append(make_scale_stage(self.pipeline_state["scale"]))
 
+        if self.pipeline_state["use_blur"]:
+            s.append(make_gaussian_blur_stage(self.pipeline_state["blur_ksize"]))
+
         if self.pipeline_state["use_clahe"]:
             s.append(
                 make_clahe_stage(
@@ -80,9 +83,6 @@ class PipelineController:
                     tile_grid_size=(8, 8),
                 )
             )
-
-        if self.pipeline_state["use_blur"]:
-            s.append(make_gaussian_blur_stage(self.pipeline_state["blur_ksize"]))
 
         if self.pipeline_state["use_otsu"]:
             s.append(make_otsu_threshold_stage())

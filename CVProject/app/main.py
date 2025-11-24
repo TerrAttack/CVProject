@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from capture.orbbec_ir_capture import OrbbecIRCapture
 from capture.cv_capture import OpenCVCapture
+from capture.raw_ir_capture import RawFolderCapture
 
 from detection.simple_blob_strategy import SimpleBlobStrategy
 from app.gui_controls import PipelineController
 
 
 def main():
-    capture = OrbbecIRCapture(640, 576, 30)
+    #capture = OrbbecIRCapture(640, 576, 30)
     #capture = OpenCVCapture("data/videos/Dots.mp4")
+    capture = RawFolderCapture("data/raw_ir")
 
     if not capture.is_opened():
         print("[main] Failed to open Orbbec IR stream.")
