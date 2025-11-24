@@ -24,10 +24,13 @@ Stage = Callable[[FrameData, float], FrameData]
 
 
 class CompositeProcessor(ImageProcessor):
+    """
+    Runs a list of stages sequentially over a FrameData.
+    Stages may be empty; in that case only initial gray conversion is used.
+    """
+
     def __init__(self, stages: List[Stage]):
-        if not stages:
-            raise ValueError("CompositeProcessor requires at least one stage")
-        self.stages = stages
+        self.stages = list(stages)
 
     def process(self, frame_bgr: np.ndarray, dt: float) -> FrameData:
         data = FrameData(

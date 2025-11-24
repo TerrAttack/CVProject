@@ -1,5 +1,7 @@
+from __future__ import annotations
 import cv2 as cv
 import time
+from typing import Optional
 
 from capture.capture_base import Capture
 from processing.image_processor import ImageProcessor
@@ -13,27 +15,26 @@ class VideoApp:
         processor: ImageProcessor,
         strategy: DetectionStrategy,
         win: str = "Video",
-        show_debug: bool = True,
     ):
         self.capture = capture
         self.processor = processor
         self.strategy = strategy
         self.win = win
-        self.show_debug = show_debug
 
         self.paused = False
         self.step = False
 
     def run(self):
         if not self.capture.is_opened():
-            print("[VideoApp] Capture not opened, exiting.")
+            print("[VideoApp] Capture not opened.")
             return
-        
+
         cv.namedWindow(self.win, cv.WINDOW_NORMAL)
 
         last_time = time.time()
-        debug_windows = set()
         fps = 0.0
+
+        print("[VideoApp] Keys: q/ESC=quit, space/p=pause, n=step")
 
         while True:
             if not self.paused or self.step:
@@ -47,36 +48,30 @@ class VideoApp:
                 fps = 1.0 / dt
 
                 ok, frame = self.capture.read()
-                if not ok:
+                if not ok or frame is None:
+                    print("[VideoApp] Capture ended or error.")
                     break
 
                 data = self.processor.process(frame, dt)
                 out = self.strategy.process_frame(data, dt)
 
                 vis = out.vis
-                if vis is not None:
-                    cv.putText(
-                        vis,
-                        f"FPS: {fps:.1f}",
-                        (5, 40),
-                        cv.FONT_HERSHEY_SIMPLEX,
-                        0.6,
-                        (0, 255, 0),
-                        2,
-                        cv.LINE_AA,
-                    )
-                    cv.imshow(self.win, vis)
+                if vis is None:
+                    vis = data.bgr
 
-                # debug windows
-                if self.show_debug:
-                    for name, img in out.debug.items():
-                        wname = f"{self.win}:{name}"
-                        cv.imshow(wname, img)
-                        debug_windows.add(wname)
-                else:
-                    for w in debug_windows:
-                        cv.destroyWindow(w)
-                    debug_windows.clear()
+                # FPS overlay (blob count is drawn in the strategy)
+                cv.putText(
+                    vis,
+                    f"FPS: {fps:.1f}",
+                    (5, 40),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                    cv.LINE_AA,
+                )
+
+                cv.imshow(self.win, vis)
 
             key = cv.waitKey(1) & 0xFF
             if key in (ord("q"), 27):
@@ -85,8 +80,7 @@ class VideoApp:
                 self.paused = not self.paused
             if key == ord("n"):
                 self.step = True
-            if key == ord("d"):
-                self.show_debug = not self.show_debug
 
         self.capture.release()
         cv.destroyAllWindows()
+        print("[VideoApp] Stopped.")
