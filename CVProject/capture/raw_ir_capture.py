@@ -5,7 +5,10 @@ from pathlib import Path
 from typing import Tuple, List
 
 from .capture_base import Capture
-from .orbbec_ir_capture import ir_to_8bit_percentile  # <- use same mapping as live capture
+from .orbbec_ir_capture import (
+    ir_to_8bit_percentile,
+    ir_to_8bit_window,
+)
 
 
 class RawFolderCapture(Capture):
@@ -13,9 +16,11 @@ class RawFolderCapture(Capture):
     Plays back a folder of 16-bit IR PNG frames as if it were a camera.
 
     - Reads uint16 grayscale PNGs from a folder (raw IR recording).
-    - Uses the same 16->8 bit percentile mapping as OrbbecIRCapture
-      (ir_to_8bit_percentile), so the output looks like your live view.
+    - Can apply the same 16-bit VisualRange windowing as OrbbecIRCapture
+      via set_visual_range(enabled, min, max).
+    - Falls back to percentile-based mapping when visual range is disabled.
     - Converts to BGR so the rest of the pipeline can treat it like a normal camera.
+    - Loopt automatisch door de frames in de folder.
     """
 
     def __init__(self, folder: str):
@@ -38,6 +43,14 @@ class RawFolderCapture(Capture):
         self.h, self.w = tmp.shape
         self._opened = True
 
+        # Visual range settings (in raw 16-bit units, like OrbbecIRCapture)
+        self._use_visual_range = False
+        self._vr_min = 0
+        self._vr_max = 5000
+
+    # ------------------------------------------------------------------
+    #   Public API (Capture)
+    # ------------------------------------------------------------------
     def is_opened(self) -> bool:
         return self._opened
 
@@ -45,9 +58,12 @@ class RawFolderCapture(Capture):
         if not self._opened:
             return False, None
 
-        if self.index >= len(self.files):
-            # End of sequence
+        if len(self.files) == 0:
             return False, None
+
+        # Loop: als we bij het einde zijn, ga terug naar het begin
+        if self.index >= len(self.files):
+            self.index = 0
 
         path = self.files[self.index]
         img16 = cv.imread(str(path), cv.IMREAD_UNCHANGED)
@@ -60,10 +76,11 @@ class RawFolderCapture(Capture):
             print(f"[RawFolderCapture] Unexpected shape {img16.shape} in {path}")
             return False, None
 
-        # --- IMPORTANT ---
-        # Map raw 16-bit IR to 8-bit using the same percentile mapping
-        # that OrbbecIRCapture uses when visual range is disabled.
-        img8 = ir_to_8bit_percentile(img16)
+        # 16-bit -> 8-bit mapping
+        if self._use_visual_range:
+            img8 = ir_to_8bit_window(img16, self._vr_min, self._vr_max)
+        else:
+            img8 = ir_to_8bit_percentile(img16)
 
         img_bgr = cv.cvtColor(img8, cv.COLOR_GRAY2BGR)
 
@@ -72,3 +89,23 @@ class RawFolderCapture(Capture):
 
     def release(self) -> None:
         self._opened = False
+
+    # ------------------------------------------------------------------
+    #   VisualRange API (mimic OrbbecIRCapture)
+    # ------------------------------------------------------------------
+    def set_visual_range(self, enabled: bool, min_val: int, max_val: int) -> None:
+        """
+        Enable/disable visual range windowing on raw 16-bit PNG frames.
+
+        Parameters are in raw 16-bit units (0..65535), typically something like
+        10000..20000 to mimic Orbbec's VisualRange behaviour.
+        """
+        self._use_visual_range = bool(enabled)
+        self._vr_min = int(min_val)
+        self._vr_max = int(max_val)
+
+        if self._vr_max <= self._vr_min:
+            self._vr_max = self._vr_min + 1
+
+        print(f"[RawFolderCapture] VisualRange set: enabled={self._use_visual_range}, "
+              f"min={self._vr_min}, max={self._vr_max}")

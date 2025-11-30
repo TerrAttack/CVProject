@@ -1,7 +1,6 @@
 from __future__ import annotations
 import cv2 as cv
 import time
-from typing import Optional
 
 from capture.capture_base import Capture
 from processing.image_processor import ImageProcessor
@@ -49,6 +48,9 @@ class VideoApp:
 
                 ok, frame = self.capture.read()
                 if not ok or frame is None:
+                    # Voor camera's is dit echt een fout.
+                    # Voor je loopende sources (OpenCVCapture met file,
+                    # RawFolderCapture) hoort read() altijd True te blijven geven.
                     print("[VideoApp] Capture ended or error.")
                     break
 
@@ -59,7 +61,6 @@ class VideoApp:
                 if vis is None:
                     vis = data.bgr
 
-                # FPS overlay (blob count is drawn in the strategy)
                 cv.putText(
                     vis,
                     f"FPS: {fps:.1f}",

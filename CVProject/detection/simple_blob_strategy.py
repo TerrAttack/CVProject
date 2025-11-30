@@ -10,13 +10,13 @@ from processing.image_processor import FrameData
 class SimpleBlobStrategy(DetectionStrategy):
     def __init__(
         self,
-        min_threshold=50,
+        min_threshold=10,
         max_threshold=255,
         threshold_step=10,
         min_area=1,
         max_area=20000,
         min_dist=1,
-        filter_by_color = False,
+        filter_by_color = True,
         blob_color = 255,
         draw=True,
         debug_gray=True,
@@ -34,6 +34,9 @@ class SimpleBlobStrategy(DetectionStrategy):
         params.blobColor = blob_color
         params.minDistBetweenBlobs = min_dist
         params.filterByCircularity = False
+
+        params.filterByInertia = False
+        params.filterByConvexity = False
 
         self.detector = cv.SimpleBlobDetector_create(params)
 
