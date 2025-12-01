@@ -15,16 +15,16 @@ from app.gui_controls import PipelineController
 
 def main():
     #capture = OrbbecIRCapture(640, 576, 30)
-    #capture = OpenCVCapture("data/videos/IR_recording.mp4")
+    #capture = OpenCVCapture("data/videos/Dots.mp4")
     capture = RawFolderCapture("data/raw_ir")
 
     if not capture.is_opened():
         print("[main] Failed to open Orbbec IR stream.")
         return
 
-    #strategy = SimpleBlobStrategy()
+    strategy = SimpleBlobStrategy()
     #strategy = DoGBlobStrategy()
-    strategy = LoGBlobStrategy()
+    #strategy = LoGBlobStrategy()
     #strategy = CCLBlobStrategy()
     #strategy = DoHBlobStrategy()
 

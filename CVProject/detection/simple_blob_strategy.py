@@ -10,9 +10,9 @@ from processing.image_processor import FrameData
 class SimpleBlobStrategy(DetectionStrategy):
     def __init__(
         self,
-        min_threshold=10,
+        min_threshold=50,
         max_threshold=255,
-        threshold_step=10,
+        threshold_step=5,
         min_area=1,
         max_area=20000,
         min_dist=1,

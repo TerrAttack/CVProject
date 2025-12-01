@@ -17,10 +17,11 @@ def _blobs_to_keypoints(blobs: List[Blob]):
 class LoGBlobStrategy(DetectionStrategy):
     def __init__(
         self,
-        sigma: float = 2.0,
-        threshold_rel: float = 0.2,
+        sigma: float = 1,
+        threshold_rel: float = 0.1,
         min_area: float = 1.0,
         max_area: float = 1e6,
+        merge_distance: float = 1.0,  # nieuwe variable: afstand om blobs te mergen (px)
         draw: bool = True,
         debug_outputs: bool = True,
     ):
@@ -32,11 +33,13 @@ class LoGBlobStrategy(DetectionStrategy):
         - Laplacian -> |LoG|-respons
         - threshold op threshold_rel * max_response
         - connectedComponents op het mask
+        - optional NMS: merge blobs binnen merge_distance
         """
         self.sigma = float(sigma)
         self.threshold_rel = float(threshold_rel)
         self.min_area = float(min_area)
         self.max_area = float(max_area)
+        self.merge_distance = float(merge_distance)
         self.draw = draw
         self.debug_outputs = debug_outputs
 
@@ -92,9 +95,21 @@ class LoGBlobStrategy(DetectionStrategy):
             mask_label = (labels == label)
             mean_resp = float(response[mask_label].mean()) if mask_label.any() else 0.0
 
-            blobs.append(Blob(x=float(cx), y=float(cy), size=size, area=area, response=mean_resp))
+            blobs.append(
+                Blob(
+                    x=float(cx),
+                    y=float(cy),
+                    size=size,
+                    area=area,
+                    response=mean_resp,
+                )
+            )
 
-        # 4) Visualisatie basis
+        # 4) Optionele NMS / merge op basis van afstand
+        if self.merge_distance > 0 and len(blobs) > 1:
+            blobs = self._apply_distance_nms(blobs, self.merge_distance)
+
+        # 5) Visualisatie basis
         if gray.dtype == np.uint8:
             vis_gray = gray
         else:
@@ -102,7 +117,7 @@ class LoGBlobStrategy(DetectionStrategy):
 
         vis = cv.cvtColor(vis_gray, cv.COLOR_GRAY2BGR)
 
-        # 5) Blobs tekenen in dezelfde stijl als SimpleBlobStrategy
+        # 6) Blobs tekenen in dezelfde stijl als SimpleBlobStrategy
         if self.draw:
             kps = _blobs_to_keypoints(blobs)
             vis = cv.drawKeypoints(
@@ -134,3 +149,27 @@ class LoGBlobStrategy(DetectionStrategy):
             debug["log_mask"] = mask
 
         return StrategyOutput(vis=vis, debug=debug, detections=blobs)
+
+    def _apply_distance_nms(self, blobs: List[Blob], dist: float) -> List[Blob]:
+        """Houd alleen de sterkste blob binnen een gegeven afstand (px)."""
+        if len(blobs) <= 1:
+            return blobs
+
+        keep: List[Blob] = []
+        dist2 = dist * dist
+
+        # sorteer op aflopende response (sterkste eerst)
+        sorted_blobs = sorted(blobs, key=lambda b: b.response, reverse=True)
+
+        for b in sorted_blobs:
+            ok = True
+            for kb in keep:
+                dx = kb.x - b.x
+                dy = kb.y - b.y
+                if dx * dx + dy * dy <= dist2:
+                    ok = False
+                    break
+            if ok:
+                keep.append(b)
+
+        return keep

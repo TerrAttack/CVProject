@@ -57,7 +57,7 @@ class PipelineController:
 
         # Capture-level visual range (16-bit)
         self.vr_enabled = False
-        self.vr_min = 10000
+        self.vr_min = 15000
         self.vr_max = 20000
 
         # Initialise VisualRange op captures die het ondersteunen

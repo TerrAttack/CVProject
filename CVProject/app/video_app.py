@@ -61,16 +61,7 @@ class VideoApp:
                 if vis is None:
                     vis = data.bgr
 
-                cv.putText(
-                    vis,
-                    f"FPS: {fps:.1f}",
-                    (5, 40),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 255, 0),
-                    2,
-                    cv.LINE_AA,
-                )
+                #self.show_fps(fps, vis)
 
                 cv.imshow(self.win, vis)
 
@@ -85,3 +76,15 @@ class VideoApp:
         self.capture.release()
         cv.destroyAllWindows()
         print("[VideoApp] Stopped.")
+
+    def show_fps(self, fps, vis):
+        cv.putText(
+                    vis,
+                    f"FPS: {fps:.1f}",
+                    (5, 40),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                    cv.LINE_AA,
+                )
